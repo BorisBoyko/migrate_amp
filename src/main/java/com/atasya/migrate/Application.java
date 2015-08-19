@@ -4,24 +4,26 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
-import java.io.PrintWriter;
+import java.util.Iterator;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
 
-import com.google.common.base.Optional;
-import com.google.common.collect.Ordering;
+import com.atasya.migrate.versions.Amp_2_2_0_1_VersionConverter;
+import com.atasya.migrate.versions.Amp_2_2_0_2_VersionConverter;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class Application {
 
+	public static final ImmutableList<VersionConverter> VERSIONS = ImmutableList.<VersionConverter>of(
+			new Amp_2_2_0_1_VersionConverter(),
+			new Amp_2_2_0_2_VersionConverter());
+
 	public static void main(String[] args) throws Exception {
-		final CommandLine cmdLine = parseCommandLine(args).orNull();
+		final CommandLine cmdLine = CmdOptions.parseCommandLine(args).orNull();
 		if (cmdLine == null) {
 			return;
 		}
@@ -37,42 +39,34 @@ public class Application {
 		});
 		for (int i = 0; i < files.length; i++) {
 			final File file = files[i];
+			System.out.println(file.getName());
 
 			final JsonObject root = new Gson().fromJson(new FileReader(file), JsonElement.class).getAsJsonObject();
-			root.get("Aginity Version").getAsJsonObject().addProperty("Metadata Version", "amp_2.2.0.2");
+			final String version = root.get("Aginity Version").getAsJsonObject().get("Metadata Version").getAsString();
+			final Iterator<VersionConverter> versionsIterator = VERSIONS.iterator();
+			VersionConverter versionConverter = null;
+			while (versionsIterator.hasNext()) {
+				versionConverter = versionsIterator.next();
+				if (!versionConverter.getSourceVersion().equalsIgnoreCase(version)) {
+					versionConverter = null;
+					continue;
+				}
 
-			for (JsonElement element : root.get("Fact Columns").getAsJsonArray()) {
-				final JsonObject column = element.getAsJsonObject();
-				column.addProperty("ColumnPhysicalName", column.get("ColumnName").getAsString());
+				break;
 			}
 
-			for (JsonElement element : root.get("Fact Table").getAsJsonArray()) {
-				final JsonObject table = element.getAsJsonObject();
-				final String id = table.get("ID").getAsString();
-				table.addProperty("ID", table.get("Name").getAsString());
-				table.addProperty("Name", id);
+			Preconditions.checkArgument(versionConverter != null, "Not supported verion: " + version);
+
+			versionConverter.migrate(root);
+			while (versionsIterator.hasNext()) {
+				versionConverter = versionsIterator.next();
+				versionConverter.migrate(root);
 			}
 
 			final File destFile = new File(destFolder, file.getName());
 			final FileWriter fileWriter = new FileWriter(destFile);
 			fileWriter.write(new Gson().toJson(root));
 			fileWriter.close();
-		}
-	}
-
-	private static Optional<CommandLine> parseCommandLine(String[] args) {
-		try {
-			final CommandLineParser parser = new PosixParser();
-			final CommandLine cmdLine = parser.parse(CmdOptions.options, args);
-			return Optional.of(cmdLine);
-		} catch (ParseException e) {
-			try (final PrintWriter printer = new PrintWriter(System.out)) {
-				HelpFormatter formatter = new HelpFormatter();
-				formatter.setOptionComparator(Ordering.explicit(CmdOptions.optionList));
-				formatter.printUsage(printer, 200, "migrate.bat", CmdOptions.options);
-				formatter.printOptions(printer, 200, CmdOptions.options, 2, 3);
-			}
-			return Optional.absent();
 		}
 	}
 

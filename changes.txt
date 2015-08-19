@@ -1,0 +1,148 @@
+amp_2.2.0.2 -> amp_2.2.0.3
+
+PubParameterValues
+  rename
+    ConfigurationName -> InheritedConfigurationName
+    MetadataObjectKey -> InheritedMetadataObjectKey
+    MetadataObjectTypeCode -> InheritedMetadataObjectTypeCode
+    SubjectAreaID -> InheritedSubjectAreaID
+    TemplateName -> InheritedTemplateName
+    MappingParameterKey -> MetadataObjectParameterKey
+  calculate
+    NVL(PubDimensionKey, PubFactKey) -> LocalMetadataObjectKey
+    CASE WHEN PubDimensionKey IS NOT NULL THEN 'PD' WHEN PubFactKey IS NOT NULL THEN 'PF' ELSE NULL END -> LocalMetadataObjectTypeCode
+  as is
+    DataType
+    Key
+    ParamCode
+    ParamValue
+    ParamValueCardinality
+    ParamValueType
+
+    {
+    			"ConfigurationName" : "Lifetime", -- configuration_name
+    			"DataType" : 12, -- param_value_data_type_key
+    			"Key" : 162751, -- pub_parameter_value_key
+    			"MappingParameterKey" : null, -- mapping_parameter_key
+    			"MetadataObjectKey" : null, -- metadata_object_key
+    			"MetadataObjectTypeCode" : "AAC", -- metadata_object_type
+    			"ParamCode" : "$dynamic_integer", -- param_code
+    			"ParamValue" : "100000000", -- param_value
+    			"ParamValueCardinality" : "S", -- param_value_cardinality
+    			"ParamValueType" : "L", -- param_value_type
+    			"PubDimensionKey" : 152518, -- pub_dimension_key
+    			"PubFactKey" : null, -- pub_fact_key
+    			"SubjectAreaID" : "CUSTOMER", -- subject_area_id
+    			"TemplateName" : "Customer Margin" -- template_name
+    		}
+
+    {
+  			"DataType" : 12, -- param_value_data_type_key
+  			"InheritedConfigurationName" : "Lifetime", -- inherited_configuration_name
+  			"InheritedMetadataObjectKey" : null, -- inherited_metadata_object_key
+  			"InheritedMetadataObjectTypeCode" : "AAC", -- inherited_metadata_object_type
+  			"InheritedSubjectAreaID" : "CUSTOMER", -- inherited_subject_area_id
+  			"InheritedTemplateName" : "Customer Margin", -- inherited_template_name
+  			"Key" : 162751, -- inherited_parameter_value_key
+  			"LocalMetadataObjectKey" : 152518, -- local_metadata_object_key
+  			"LocalMetadataObjectTypeCode" : "PD", -- local_metadata_object_type
+  			"MetadataObjectParameterKey" : null, -- metadata_object_parameter_key
+  			"ParamCode" : "$dynamic_integer", -- param_code
+  			"ParamValue" : "100000000", -- param_value
+  			"ParamValueCardinality" : "S", -- param_value_cardinality
+  			"ParamValueType" : "L" -- param_value_type
+  		}
+
+    INSERT INTO ADF_INHERITED_PARAMETER_VALUE(
+    	  inherited_parameter_value_key
+    	, local_metadata_object_type
+    	, local_metadata_object_key
+    	, inherited_metadata_object_type
+    	, inherited_metadata_object_key
+    	, inherited_subject_area_id
+    	, inherited_template_name
+    	, inherited_configuration_name
+    	, param_code
+    	, param_value_type
+    	, param_value
+    	, param_value_data_type_key
+    	, param_value_cardinality
+    	, metadata_object_parameter_key
+    )
+    SELECT
+    	  pub_parameter_value_key
+        , CASE WHEN pub_dimension_key IS NOT NULL THEN 'PD' WHEN pub_fact_key IS NOT NULL THEN 'PF' ELSE NULL END::VARCHAR(3)
+    	, NVL(pub_dimension_key, pub_fact_key)
+    	, metadata_object_type
+    	, metadata_object_key
+    	, subject_area_id
+    	, template_name
+    	, configuration_name
+    	, param_code
+    	, CASE WHEN UPPER(param_value_type)='M' THEN 'P' ELSE param_value_type END::VARCHAR(2)
+    	, param_value
+    	, param_value_data_type_key
+    	, param_value_cardinality
+    	, mapping_parameter_key
+    FROM ADF_PUB_PARAMETER_VALUE;
+
+MappingParameters
+  rename
+    MappingKey -> MetadataObjectKey
+  default value
+    MetadataObjectTypeCode = 'PM'
+  as is
+    Cardinality
+    Code
+    DataType
+    Description
+    Key
+    ParamValue
+    Scope
+
+    OLD
+    {
+  			"Cardinality" : "L", -- parameter_cardinality
+  			"Code" : "$dynamic_date&time", -- param_code
+  			"DataType" : 6, -- metadata_object_type
+  			"Description" : "", -- param_description
+  			"Key" : 162718, -- metadata_object_parameter_key
+  			"MappingKey" : 152504, -- mapping_key
+  			"ParamValue" : "", -- param_value
+  			"Scope" : "D" -- parameter_scope
+  		}
+      NEW
+      {
+  			"Cardinality" : "L", -- parameter_cardinality
+  			"Code" : "$dynamic_date&time", -- param_code
+  			"DataType" : 6, -- metadata_object_type
+  			"Description" : "", -- param_description
+  			"Key" : 162718, -- metadata_object_parameter_key
+  			"MetadataObjectKey" : 152504, -- metadata_object_key
+  			"MetadataObjectTypeCode" : "PM",
+  			"ParamValue" : "", -- param_value
+  			"Scope" : "D" -- parameter_scope
+  		}
+
+      INSERT INTO ADF_METADATA_OBJECT_PARAMETER(
+      	  metadata_object_parameter_key
+      	, metadata_object_type
+      	, metadata_object_key
+      	, param_code
+      	, param_description
+      	, param_type_key
+      	, parameter_cardinality
+      	, parameter_scope
+      	, param_value
+      )
+      SELECT
+      	  mapping_parameter_key
+          , 'PM'
+          , mapping_key
+          , param_code
+      	, param_description
+      	, param_type_key
+      	, parameter_cardinality
+      	, parameter_scope
+      	, param_value
+      FROM ADF_MAPPING_PARAMETER;
