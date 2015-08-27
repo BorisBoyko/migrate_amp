@@ -1,6 +1,7 @@
 package com.atasya.migrate.versions;
 
 import com.atasya.migrate.VersionConverter;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -80,11 +81,30 @@ public class Amp_2_2_0_2_VersionConverter implements VersionConverter {
 			table.addProperty("LocalMetadataObjectKey", localMetadataObjectKey);
 			table.addProperty("LocalMetadataObjectTypeCode", localMetadataObjectTypeCode);
 		}
+		rename(object, "PubParameterValues", "InheritedParameterValues");
+
+		final JsonArray metadataObjectTypes = object.get("MetadataObjectTypes").getAsJsonArray();
+		addMetadataObjectType(metadataObjectTypes, "Publication Mapping", "ADF_MAPPING", "PM", 1);
+		addMetadataObjectType(metadataObjectTypes, "Aggregate Measure Mapping", "ADF_MAPPING", "AM", 2);
+		addMetadataObjectType(metadataObjectTypes, "Aggregate Attribute Mapping", "ADF_MAPPING", "AA", 3);
+		addMetadataObjectType(metadataObjectTypes, "Pub Dimension (Base Publication Type)", "ADF_PUB_DIMENSION", "PD", 4);
+		addMetadataObjectType(metadataObjectTypes, "Pub Fact (Base Publication Fact)", "ADF_PUB_FACT", "PF", 5);
+		addMetadataObjectType(metadataObjectTypes, "Derived Attribute", "ADF_PUB_AGGREGATE", "DA", 6);
 	}
 
 	public static void rename(JsonObject column, final String oldName, final String newName) {
 		final JsonElement value = column.get(oldName);
 		column.add(newName, value);
 		column.remove(oldName);
+	}
+
+	public static void addMetadataObjectType(JsonArray metadataObjectTypes,
+			String name, String tableName, String typeCode, int typeValue) {
+		final JsonObject metadataObjectType = new JsonObject();
+		metadataObjectType.addProperty("MetadataObjectName", name);
+		metadataObjectType.addProperty("MetadataObjectTableName", tableName);
+		metadataObjectType.addProperty("MetadataObjectTypeCode", typeCode);
+		metadataObjectType.addProperty("MetadataObjectTypeValue", typeValue);
+		metadataObjectTypes.add(metadataObjectType);
 	}
 }
