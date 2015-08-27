@@ -56,6 +56,7 @@ public class Amp_2_2_0_2_VersionConverter implements VersionConverter {
 			rename(column, "MappingKey", "MetadataObjectKey");
 			column.addProperty("MetadataObjectTypeCode", "PM");
 		}
+		rename(object, "MappingParameters", "MetadataObjectParameters");
 
 		for (JsonElement element : object.get("PubParameterValues").getAsJsonArray()) {
 			final JsonObject table = element.getAsJsonObject();
